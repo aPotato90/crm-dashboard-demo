@@ -5,6 +5,7 @@
  * `seed-generator.ts`; this module only writes it to Firestore.
  */
 import {
+  deleteDoc,
   getDocs,
   limit,
   query,
@@ -20,7 +21,9 @@ import {
   contactsRepo,
   dealsRepo,
   getSandboxState,
+  MAX_WRITES_PER_BATCH as MAX_BATCH_WRITES,
   sandboxCollectionRef,
+  sandboxStateRef,
   SANDBOX_COLLECTIONS,
   setSandboxState,
   tasksRepo,
@@ -35,8 +38,7 @@ export {
   type DemoData,
 } from "./seed-generator";
 
-/** Firestore allows at most 500 writes per batch. */
-export const MAX_BATCH_WRITES = 500;
+export { MAX_WRITES_PER_BATCH as MAX_BATCH_WRITES } from "./repo";
 
 /** One queued write; applied to whichever batch it lands in. */
 type Write = (batch: WriteBatch) => void;
@@ -136,6 +138,18 @@ export function resetDemoData(uid: string): Promise<boolean> {
     await setSandboxState(uid, { seeded: false, seededAt: null });
     for (const name of SANDBOX_COLLECTIONS) await clearCollection(uid, name);
     await writeDemoData(uid);
+    return true;
+  });
+}
+
+/**
+ * Deletes everything in the visitor's sandbox, including `meta/state`.
+ * Used when a visitor signs out, so anonymous sandboxes don't pile up.
+ */
+export function deleteSandbox(uid: string): Promise<boolean> {
+  return once(uid, async () => {
+    for (const name of SANDBOX_COLLECTIONS) await clearCollection(uid, name);
+    await deleteDoc(sandboxStateRef(uid));
     return true;
   });
 }

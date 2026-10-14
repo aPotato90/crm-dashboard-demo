@@ -10,6 +10,7 @@ import type { WithId } from "./common";
 import type { CompanyData, CompanySize } from "./company";
 import type { ContactData, ContactSource, ContactStatus } from "./contact";
 import { isClosedStage, type DealData, type DealStage } from "./deal";
+import { STAGE_DEFAULT_PROBABILITY } from "./labels";
 import type { TaskData } from "./task";
 
 export type DemoData = {
@@ -45,16 +46,6 @@ const DEALS_PER_STAGE: Record<DealStage, number> = {
   negotiation: 4,
   won: 8,
   lost: 4,
-};
-
-/** Typical win probability (percent) for open stages. */
-const STAGE_PROBABILITY: Record<DealStage, number> = {
-  new: 10,
-  qualified: 25,
-  proposal: 50,
-  negotiation: 75,
-  won: 100,
-  lost: 0,
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -468,7 +459,12 @@ export function generateDemoData(options: GenerateOptions = {}): DemoData {
         stage as Exclude<DealStage, "won" | "lost">
       ];
       createdAt = between(rng, daysAgo(now, maxAge), daysAgo(now, 2));
-      expectedCloseDate = new Date(now.getTime() + rng.int(7, 90) * DAY_MS);
+      // Most open deals close in the future; a few have slipped past their
+      // expected date (shown as overdue on the board).
+      expectedCloseDate =
+        stageIndex === 0 && (stage === "proposal" || stage === "negotiation")
+          ? new Date(now.getTime() - rng.int(2, 12) * DAY_MS)
+          : new Date(now.getTime() + rng.int(7, 90) * DAY_MS);
     }
 
     // A contact can't have a deal before they were added to the CRM.
@@ -478,8 +474,11 @@ export function generateDemoData(options: GenerateOptions = {}): DemoData {
     }
 
     const probability = closed
-      ? STAGE_PROBABILITY[stage]
-      : Math.min(95, Math.max(5, STAGE_PROBABILITY[stage] + rng.int(-5, 5)));
+      ? STAGE_DEFAULT_PROBABILITY[stage]
+      : Math.min(
+          95,
+          Math.max(5, STAGE_DEFAULT_PROBABILITY[stage] + rng.int(-5, 5)),
+        );
 
     return {
       id: `deal-${pad(i + 1)}`,

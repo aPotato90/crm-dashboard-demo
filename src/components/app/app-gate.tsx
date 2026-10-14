@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/firebase/auth-provider";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { describeFirebaseError } from "@/lib/firebase/errors";
 
-import { AppHeader } from "./app-header";
+import { AppShell } from "./app-shell";
 import { AppSkeleton } from "./app-skeleton";
 import { SandboxProvider, useSandbox } from "./sandbox-provider";
 
@@ -60,7 +60,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Seeds the sandbox on first entry, then renders the app. */
+/** Seeds the sandbox on first entry, then renders the app shell. */
 function SandboxGate({ children }: { children: React.ReactNode }) {
   const { status, error, retry } = useSandbox();
 
@@ -72,12 +72,14 @@ function SandboxGate({ children }: { children: React.ReactNode }) {
       <AppSkeleton message="Setting up your private sandbox with demo data. This takes a few seconds the first time…" />
     );
   }
+  if (status === "signing-out") {
+    return <AppSkeleton message="Deleting your sandbox and signing out…" />;
+  }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader />
+    <AppShell>
       {status === "error" ? (
-        <main id="main" className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
+        <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
           <Alert variant="destructive" className="px-4 py-3">
             <TriangleAlertIcon aria-hidden />
             <AlertTitle>Your sandbox could not be loaded</AlertTitle>
@@ -89,10 +91,10 @@ function SandboxGate({ children }: { children: React.ReactNode }) {
               </Button>
             </AlertDescription>
           </Alert>
-        </main>
+        </div>
       ) : (
         children
       )}
-    </div>
+    </AppShell>
   );
 }

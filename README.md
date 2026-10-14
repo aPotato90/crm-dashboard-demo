@@ -6,11 +6,32 @@ built to look and feel like a real SaaS product, but **it only uses fake data**.
 Every visitor clicks **Explore the demo**, gets an anonymous Firebase session
 and a private sandbox that is filled with fictional companies, contacts, deals,
 activities and tasks. Visitors can change anything and reset the sandbox at any
-time.
+time. Signing out deletes the sandbox.
 
-<!-- Replace with a real screenshot, e.g. docs/screenshot.png -->
+![PipelineHQ dashboard](docs/screenshots/dashboard-light-1280.png)
 
-![PipelineHQ (Demo) screenshot placeholder](docs/screenshot-placeholder.svg)
+![PipelineHQ pipeline board in dark mode](docs/screenshots/pipeline-dark-1280.png)
+
+More screenshots (375, 768 and 1280 px, light and dark) are in
+[`docs/screenshots/`](docs/screenshots/).
+
+## Features
+
+- **Dashboard:** open pipeline, won revenue this month, 90-day win rate and
+  open tasks due this week, each with a trend; charts for revenue won per
+  month, pipeline by stage and leads by source; recent activity; tasks due
+  soon that can be ticked off inline. Everything updates live.
+- **Pipeline:** a Kanban board with drag and drop by mouse, touch
+  (press and hold) or keyboard, with screen-reader announcements. Moves save
+  instantly (optimistic UI, rolled back if a write fails). Create, edit and
+  delete deals in a validated dialog; search and filter by owner.
+- **App shell:** sidebar navigation (a menu sheet on small screens), light /
+  dark / system theme without a flash, and a visible Demo banner on every
+  page.
+- **Accessibility:** semantic landmarks, skip link, focus moved to the page
+  after navigation, visible focus, WCAG AA contrast (checked with axe-core
+  in both themes), `prefers-reduced-motion`, and a data table behind every
+  chart.
 
 ## Stack
 
@@ -21,8 +42,8 @@ time.
   Cloud Firestore (no Admin SDK, no service accounts)
 - [Zod](https://zod.dev) schemas for every Firestore document
 - [date-fns](https://date-fns.org), [Recharts](https://recharts.org) and
-  [dnd-kit](https://dndkit.com) (charts and the drag-and-drop pipeline are
-  coming in the next step)
+  [dnd-kit](https://dndkit.com)
+- [React Hook Form](https://react-hook-form.com) with Zod resolvers
 - [Vitest](https://vitest.dev), ESLint and Prettier
 
 ## How it works
@@ -33,6 +54,12 @@ time.
 - `src/lib/crm/` holds the data model: one Zod schema per entity, a typed
   repository (`repo.ts`) that converts Firestore Timestamps to `Date`s, and the
   seeding code.
+- `src/lib/crm/hooks.ts` wraps real-time `onSnapshot` listeners in small hooks
+  (`useDeals`, `useContacts`, ...) with loading and error states. All writes go
+  through the repo.
+- `src/lib/crm/metrics.ts` (dashboard numbers) and `src/lib/crm/pipeline.ts`
+  (board grouping and drag-and-drop write plans) are pure functions with unit
+  tests.
 - All data lives under `users/{uid}/...`, so each visitor has a private
   sandbox. `firestore.rules` only lets the signed-in owner read or write it.
 - On first entry to `/app`, the sandbox is seeded from a deterministic
@@ -111,7 +138,7 @@ the other `NEXT_PUBLIC_FIREBASE_*` variables in `.env.local`, and run
 | `npm run lint`         | ESLint                                                 |
 | `npm run format`       | Format with Prettier                                   |
 | `npm run format:check` | Check formatting                                       |
-| `npm test`             | Unit tests (seed generator, schemas, converters)       |
+| `npm test`             | Unit tests (seed, schemas, metrics, pipeline logic)    |
 | `npm run test:rules`   | Security-rules tests against the Firestore emulator    |
 | `npm run emulators`    | Start the Auth and Firestore emulators for development |
 

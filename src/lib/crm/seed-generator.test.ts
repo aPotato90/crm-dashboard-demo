@@ -126,10 +126,18 @@ describe("generateDemoData", () => {
         );
       } else {
         expect(deal.closedAt, deal.id).toBeNull();
-        expect(deal.expectedCloseDate.getTime()).toBeGreaterThan(NOW.getTime());
       }
       expect(deal.createdAt.getTime()).toBeGreaterThan(yearAgo);
     }
+  });
+
+  it("has mostly future close dates for open deals, with a few overdue", () => {
+    const open = data.deals.filter((d) => !isClosedStage(d.stage));
+    const overdue = open.filter(
+      (d) => d.expectedCloseDate.getTime() < NOW.getTime(),
+    );
+    expect(overdue).toHaveLength(2);
+    expect(open.length - overdue.length).toBe(16);
   });
 
   it("spreads won deals over at least 6 different months", () => {

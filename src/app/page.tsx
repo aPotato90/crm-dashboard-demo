@@ -2,14 +2,15 @@ import {
   ArrowUpRightIcon,
   BarChart3Icon,
   KanbanSquareIcon,
+  ListChecksIcon,
   LockKeyholeIcon,
-  UsersIcon,
 } from "lucide-react";
 
 import { Brand } from "@/components/brand";
 import { FirebaseNotConfigured } from "@/components/firebase-not-configured";
 import { ExploreDemoButton } from "@/components/landing/explore-demo-button";
 import { ProductPreview } from "@/components/landing/product-preview";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { DEVELOPER_NAME, portfolioUrl } from "@/lib/site";
@@ -18,28 +19,28 @@ import { cn } from "@/lib/utils";
 const FEATURES = [
   {
     icon: KanbanSquareIcon,
-    title: "Visual deal pipeline",
+    title: "Drag-and-drop pipeline",
     description:
-      "Drag deals from New to Won on a board that shows value and win probability at every stage.",
-  },
-  {
-    icon: UsersIcon,
-    title: "Contacts and companies",
-    description:
-      "Every person, company, call, email and meeting in one timeline, so follow-ups never slip.",
+      "Move deals from New to Won with mouse, touch or keyboard. Each stage shows its deal count and total value, and changes save instantly.",
   },
   {
     icon: BarChart3Icon,
-    title: "Revenue insights",
+    title: "Live revenue dashboard",
     description:
-      "Monthly revenue, win rate and forecast charts that update as soon as a deal moves.",
+      "Open pipeline, won revenue, win rate and charts for monthly revenue, stages and lead sources, updated in real time as deals move.",
+  },
+  {
+    icon: ListChecksIcon,
+    title: "Activity and follow-ups",
+    description:
+      "See the latest calls, emails and meetings with each contact, and tick off the tasks due this week right from the dashboard.",
   },
 ] as const;
 
 const STEPS = [
   "Click “Explore the demo”. You get an anonymous session, no sign-up.",
   "A private sandbox is filled with fictional companies, contacts and deals.",
-  "Change anything you like. Reset the demo data at any time.",
+  "Create, edit and move deals, tick off tasks, and reset the data at any time.",
 ] as const;
 
 export default function LandingPage() {
@@ -48,21 +49,24 @@ export default function LandingPage() {
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Brand />
-          {portfolioUrl && (
-            <nav aria-label="Site">
-              <a
-                href={portfolioUrl}
-                className={cn(buttonVariants({ variant: "ghost" }))}
-              >
-                Portfolio
-                <ArrowUpRightIcon aria-hidden />
-              </a>
-            </nav>
-          )}
+          <div className="flex items-center gap-1">
+            {portfolioUrl && (
+              <nav aria-label="Site">
+                <a
+                  href={portfolioUrl}
+                  className={cn(buttonVariants({ variant: "ghost" }))}
+                >
+                  Portfolio
+                  <ArrowUpRightIcon aria-hidden />
+                </a>
+              </nav>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      <main id="main" className="flex-1">
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
         <section
           aria-labelledby="hero-title"
           className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:py-24"
@@ -112,8 +116,9 @@ export default function LandingPage() {
               Everything a small sales team needs
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Built like a real SaaS product: typed data model, per-user
-              security rules and an accessible, responsive interface.
+              Built like a real SaaS product: real-time data, a typed data
+              model, per-user security rules and an accessible, responsive
+              interface.
             </p>
             <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map(({ icon: Icon, title, description }) => (
