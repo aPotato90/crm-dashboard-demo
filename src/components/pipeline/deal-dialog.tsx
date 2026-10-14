@@ -8,17 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { CascadeDeleteDialog } from "@/components/app/cascade-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -140,7 +130,7 @@ export function DealDialog({
   const formId = useId();
   const editing = state.mode === "edit" ? state.deal : null;
   const [open, setOpen] = useState(true);
-  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // New deals default to closing in 30 days.
   const [defaultCloseDate] = useState(() =>
     format(addDays(new Date(), 30), "yyyy-MM-dd"),
@@ -239,21 +229,6 @@ export function DealDialog({
     }
   }
 
-  async function handleDelete() {
-    if (!editing) return;
-    setDeleting(true);
-    try {
-      await dealsRepo.remove(uid, editing.id);
-      toast.success(`Deleted “${editing.title}”`);
-      close();
-    } catch (error) {
-      setDeleting(false);
-      toast.error("Couldn't delete the deal", {
-        description: describeFirebaseError(error),
-      });
-    }
-  }
-
   const field = (name: keyof DealFormInput) => ({
     id: `${formId}-${name}`,
     "aria-invalid": errors[name] ? true : undefined,
@@ -269,7 +244,7 @@ export function DealDialog({
       </p>
     ) : null;
 
-  const busy = isSubmitting || deleting;
+  const busy = isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
@@ -417,32 +392,25 @@ export function DealDialog({
 
         <DialogFooter className="gap-2 sm:justify-between">
           {editing ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={busy}>
-                  <Trash2Icon aria-hidden />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this deal?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    “{editing.title}” will be removed from your pipeline. This
-                    can&apos;t be undone (except by resetting the demo data).
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep deal</AlertDialogCancel>
-                  <AlertDialogAction
-                    variant="destructive"
-                    onClick={handleDelete}
-                  >
-                    Delete deal
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <>
+              <Button
+                variant="destructive"
+                disabled={busy}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2Icon aria-hidden />
+                Delete
+              </Button>
+              {/* Activities and tasks of the deal are kept but unlinked;
+                  the toast offers Undo. */}
+              <CascadeDeleteDialog
+                target={{ kind: "deal", id: editing.id }}
+                name={editing.title}
+                open={confirmDelete}
+                onOpenChange={setConfirmDelete}
+                onDeleted={close}
+              />
+            </>
           ) : (
             <span />
           )}
