@@ -10,20 +10,26 @@ import {
 } from "react";
 
 import { getSandboxState } from "@/lib/crm/repo";
-import { resetDemoData, seedDemoData } from "@/lib/crm/seed";
+import { deleteSandbox, resetDemoData, seedDemoData } from "@/lib/crm/seed";
+import { useAuth } from "@/lib/firebase/auth-provider";
 
 export type SandboxStatus =
-  "checking" | "seeding" | "ready" | "resetting" | "error";
+  "checking" | "seeding" | "ready" | "resetting" | "signing-out" | "error";
 
 type SandboxContextValue = {
   uid: string;
   status: SandboxStatus;
   error: unknown;
   seededAt: Date | null;
-  /** Increments after a reset so views can reload their data. */
-  dataVersion: number;
+  /** True while bulk writes (reset, sign-out cleanup) are rewriting data. */
+  busy: boolean;
   /** Deletes the sandbox and reseeds it. Rejects if the reset fails. */
   reset: () => Promise<void>;
+  /**
+   * Deletes the sandbox (best effort), then signs out. Resolves to `false`
+   * when the data could not be deleted; the visitor is signed out anyway.
+   */
+  signOutAndDelete: () => Promise<boolean>;
   retry: () => void;
 };
 
@@ -40,10 +46,10 @@ export function SandboxProvider({
   uid: string;
   children: React.ReactNode;
 }) {
+  const { signOut } = useAuth();
   const [status, setStatus] = useState<SandboxStatus>("checking");
   const [error, setError] = useState<unknown>(null);
   const [seededAt, setSeededAt] = useState<Date | null>(null);
-  const [dataVersion, setDataVersion] = useState(0);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -58,7 +64,9 @@ export function SandboxProvider({
         }
         if (cancelled) return;
         setSeededAt(state?.seededAt ?? null);
-        setStatus("ready");
+        setStatus((current) =>
+          current === "checking" || current === "seeding" ? "ready" : current,
+        );
       } catch (err) {
         if (cancelled) return;
         setError(err);
@@ -76,11 +84,28 @@ export function SandboxProvider({
       await resetDemoData(uid);
       const state = await getSandboxState(uid);
       setSeededAt(state?.seededAt ?? null);
-      setDataVersion((v) => v + 1);
     } finally {
       setStatus("ready");
     }
   }, [uid]);
+
+  const signOutAndDelete = useCallback(async () => {
+    setStatus("signing-out");
+    let deleted = true;
+    try {
+      await deleteSandbox(uid);
+    } catch (err) {
+      deleted = false;
+      console.warn("Could not delete the sandbox before signing out", err);
+    }
+    try {
+      await signOut();
+    } catch (err) {
+      setStatus("ready");
+      throw err;
+    }
+    return deleted;
+  }, [uid, signOut]);
 
   const retry = useCallback(() => {
     setError(null);
@@ -89,8 +114,17 @@ export function SandboxProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ uid, status, error, seededAt, dataVersion, reset, retry }),
-    [uid, status, error, seededAt, dataVersion, reset, retry],
+    () => ({
+      uid,
+      status,
+      error,
+      seededAt,
+      busy: status === "resetting" || status === "signing-out",
+      reset,
+      signOutAndDelete,
+      retry,
+    }),
+    [uid, status, error, seededAt, reset, signOutAndDelete, retry],
   );
 
   return <SandboxContext value={value}>{children}</SandboxContext>;

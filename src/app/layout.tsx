@@ -2,9 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { DemoBanner } from "@/components/demo-banner";
+import { SkipLink } from "@/components/skip-link";
+import { ThemeSync } from "@/components/theme-sync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/firebase/auth-provider";
+import { THEME_SCRIPT } from "@/lib/theme/script";
 
 import "./globals.css";
 
@@ -40,14 +43,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The inline theme script changes class/style/data-theme before React
+      // hydrates; that difference is expected.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
-        <a
-          href="#main"
-          className="sr-only z-50 rounded-md bg-background text-sm font-medium shadow-md focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:ring-3 focus:ring-ring"
-        >
-          Skip to content
-        </a>
+        <ThemeSync />
+        <SkipLink />
         <DemoBanner />
         <AuthProvider>
           <TooltipProvider>{children}</TooltipProvider>

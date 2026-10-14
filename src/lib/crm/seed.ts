@@ -5,6 +5,7 @@
  * `seed-generator.ts`; this module only writes it to Firestore.
  */
 import {
+  deleteDoc,
   getDocs,
   limit,
   query,
@@ -21,6 +22,7 @@ import {
   dealsRepo,
   getSandboxState,
   sandboxCollectionRef,
+  sandboxStateRef,
   SANDBOX_COLLECTIONS,
   setSandboxState,
   tasksRepo,
@@ -136,6 +138,18 @@ export function resetDemoData(uid: string): Promise<boolean> {
     await setSandboxState(uid, { seeded: false, seededAt: null });
     for (const name of SANDBOX_COLLECTIONS) await clearCollection(uid, name);
     await writeDemoData(uid);
+    return true;
+  });
+}
+
+/**
+ * Deletes everything in the visitor's sandbox, including `meta/state`.
+ * Used when a visitor signs out, so anonymous sandboxes don't pile up.
+ */
+export function deleteSandbox(uid: string): Promise<boolean> {
+  return once(uid, async () => {
+    for (const name of SANDBOX_COLLECTIONS) await clearCollection(uid, name);
+    await deleteDoc(sandboxStateRef(uid));
     return true;
   });
 }

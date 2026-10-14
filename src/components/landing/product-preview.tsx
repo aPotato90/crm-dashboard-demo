@@ -5,8 +5,8 @@
 
 const KPIS = [
   { label: "Open pipeline", value: "$1.18M", delta: "+12%" },
-  { label: "Won this quarter", value: "$214K", delta: "+8%" },
-  { label: "Win rate", value: "34%", delta: "+3 pts" },
+  { label: "Won this month", value: "$62K", delta: "+8%" },
+  { label: "Win rate (90 days)", value: "67%", delta: "+3 pts" },
 ] as const;
 
 /** Monthly won revenue, as a share of the tallest bar. */
