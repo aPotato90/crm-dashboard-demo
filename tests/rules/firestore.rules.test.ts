@@ -23,8 +23,13 @@ import {
   writeBatch,
   type Firestore,
 } from "firebase/firestore";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import {
+  planCascadeDelete,
+  snapshotCascade,
+  type CascadeCollection,
+} from "@/lib/crm/cascade";
 import { toFirestoreData } from "@/lib/crm/convert";
 import { generateDemoData } from "@/lib/crm/seed-generator";
 
@@ -369,5 +374,136 @@ describe("pipeline and dashboard write patterns", () => {
     await assertSucceeds(batch.commit());
     await assertSucceeds(deleteDoc(doc(db, `users/${ALICE}/meta/state`)));
     await assertFails(deleteDoc(doc(dbFor(BOB), `users/${ALICE}/meta/state`)));
+  });
+});
+
+describe("contacts, companies and activity write patterns", () => {
+  const path = (collection: string, id: string) =>
+    `users/${ALICE}/${collection}/${id}`;
+
+  /** Writes the whole generated dataset as the owner (one batch). */
+  async function seedAll(db: Firestore) {
+    const batch = writeBatch(db);
+    for (const [name, items] of Object.entries(data) as [
+      CascadeCollection,
+      { id: string }[],
+    ][]) {
+      for (const item of items)
+        batch.set(doc(db, path(name, item.id)), stored(item));
+    }
+    await batch.commit();
+  }
+
+  it("logs an activity and updates lastContactedAt in one batch", async () => {
+    const db = dbFor(ALICE);
+    await seedAll(db);
+    const target = data.contacts[0];
+    const now = Timestamp.now();
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, `users/${ALICE}/activities`)), {
+      type: "meeting",
+      contactId: target.id,
+      dealId: null,
+      summary: "Logged from the contact page.",
+      createdAt: now,
+    });
+    batch.update(doc(db, path("contacts", target.id)), {
+      lastContactedAt: now,
+    });
+    await assertSucceeds(batch.commit());
+    // A bad lastContactedAt type fails the whole batch.
+    const bad = writeBatch(db);
+    bad.set(doc(collection(db, `users/${ALICE}/activities`)), {
+      type: "note",
+      contactId: target.id,
+      dealId: null,
+      summary: "x",
+      createdAt: now,
+    });
+    bad.update(doc(db, path("contacts", target.id)), {
+      lastContactedAt: "today",
+    });
+    await assertFails(bad.commit());
+  });
+
+  it("applies a company cascade delete (unlinks then deletes) and restores it", async () => {
+    const db = dbFor(ALICE);
+    await seedAll(db);
+    const plan = planCascadeDelete(
+      { kind: "company", id: data.companies[0].id },
+      data,
+    );
+    expect(plan.deletes.length).toBeGreaterThan(plan.counts.contacts);
+
+    // Split into small batches to exercise multi-batch commits.
+    const writes = [
+      ...plan.unlinks.map(
+        ({ collection: c, id }) =>
+          (b: ReturnType<typeof writeBatch>) =>
+            b.update(doc(db, path(c, id)), { dealId: null }),
+      ),
+      ...plan.deletes.map(
+        ({ collection: c, id }) =>
+          (b: ReturnType<typeof writeBatch>) =>
+            b.delete(doc(db, path(c, id))),
+      ),
+    ];
+    for (let i = 0; i < writes.length; i += 7) {
+      const batch = writeBatch(db);
+      writes.slice(i, i + 7).forEach((write) => write(batch));
+      await assertSucceeds(batch.commit());
+    }
+    const left = await getDocs(collection(db, `users/${ALICE}/contacts`));
+    expect(left.size).toBe(data.contacts.length - plan.counts.contacts);
+
+    // Undo: recreate every document and restore the deal links.
+    const snapshot = snapshotCascade(plan, data);
+    const restore = writeBatch(db);
+    for (const { collection: c, doc: item } of snapshot.documents) {
+      restore.set(doc(db, path(c, item.id)), stored(item));
+    }
+    for (const { collection: c, id, dealId } of snapshot.unlinks) {
+      restore.update(doc(db, path(c, id)), { dealId });
+    }
+    await assertSucceeds(restore.commit());
+    const after = await getDocs(collection(db, `users/${ALICE}/contacts`));
+    expect(after.size).toBe(data.contacts.length);
+  });
+
+  it("rejects a cascade into another visitor's sandbox", async () => {
+    await seedAll(dbFor(ALICE));
+    const bob = dbFor(BOB);
+    const batch = writeBatch(bob);
+    batch.delete(doc(bob, path("contacts", data.contacts[0].id)));
+    await assertFails(batch.commit());
+  });
+
+  it("accepts valid contact edits and rejects invalid ones", async () => {
+    const db = dbFor(ALICE);
+    const ref = doc(db, path("contacts", "x1"));
+    await setDoc(ref, contact);
+    await assertSucceeds(
+      updateDoc(ref, {
+        firstName: "Ada",
+        jobTitle: "Head of Data",
+        status: "customer",
+        tags: ["champion", "renewal"],
+      }),
+    );
+    await assertFails(updateDoc(ref, { email: "nope" }));
+    await assertFails(updateDoc(ref, { firstName: "" }));
+    await assertFails(updateDoc(ref, { companyId: null }));
+  });
+
+  it("accepts valid company edits and rejects invalid ones", async () => {
+    const db = dbFor(ALICE);
+    const ref = doc(db, path("companies", "x1"));
+    await setDoc(ref, company);
+    await assertSucceeds(
+      updateDoc(ref, { name: "Renamed Co", size: "51-200", website: "" }),
+    );
+    await assertFails(updateDoc(ref, { size: "huge" }));
+    await assertFails(updateDoc(ref, { website: "ftp://files.example.com" }));
+    await assertFails(updateDoc(ref, { name: "x".repeat(121) }));
   });
 });

@@ -7,7 +7,7 @@
  * identical listeners internally, so several components can use the same
  * hook without extra reads.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/lib/firebase/auth-provider";
 
@@ -32,6 +32,8 @@ export type LiveCollection<T> = {
   /** True until the first snapshot for the current visitor arrives. */
   loading: boolean;
   error: Error | null;
+  /** Re-subscribes after an error. */
+  retry: () => void;
 };
 
 type Snapshot<T> = { key: string; data: T[]; error: Error | null };
@@ -41,8 +43,10 @@ function useLiveCollection<T extends Record<string, unknown>>(
   limit?: number,
 ): LiveCollection<WithId<T>> {
   const uid = useAuth().user?.uid ?? null;
-  const key = uid ? `${uid}:${limit ?? "all"}` : null;
+  const [attempt, setAttempt] = useState(0);
+  const key = uid ? `${uid}:${limit ?? "all"}:${attempt}` : null;
   const [snapshot, setSnapshot] = useState<Snapshot<WithId<T>> | null>(null);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
     if (!uid || !key) return;
@@ -56,9 +60,11 @@ function useLiveCollection<T extends Record<string, unknown>>(
     );
   }, [repo, uid, key, limit]);
 
-  if (!key) return { data: [], loading: false, error: null };
-  if (snapshot?.key !== key) return { data: [], loading: true, error: null };
-  return { data: snapshot.data, loading: false, error: snapshot.error };
+  if (!key) return { data: [], loading: false, error: null, retry };
+  if (snapshot?.key !== key) {
+    return { data: [], loading: true, error: null, retry };
+  }
+  return { data: snapshot.data, loading: false, error: snapshot.error, retry };
 }
 
 export function useCompanies(): LiveCollection<WithId<CompanyData>> {
