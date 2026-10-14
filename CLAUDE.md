@@ -21,7 +21,14 @@ product, but it is a demo.
 - `cacheComponents` and `partialPrefetching` are on (see `next.config.ts`).
   Read `node_modules/next/dist/docs/` before using an API you are unsure about.
 - Pages under `/app` render only in the browser behind the auth gate, so each
-  `page.tsx` there (and the layout) exports `instant = false`.
+  `page.tsx` there (and the layout) exports `instant = false`. The `/app`
+  layout also renders `<DynamicMarker />` beside the gate; it lets dynamic
+  routes like `/app/contacts/[id]` build under Cache Components. Do not
+  remove it.
+- Components that call `useSearchParams` or `useParams` must sit inside a
+  `<Suspense>` boundary (the page wraps them with a skeleton fallback).
+- Public pages (`/`, `/about`) live in the `(site)` route group, which also
+  scopes the generated Open Graph image to them.
 
 ## Secrets and Firebase
 
@@ -31,9 +38,16 @@ product, but it is a demo.
 - No service accounts, no Firebase Admin SDK.
 - All user data lives under `users/{uid}/...`. Components never build Firestore
   paths themselves: go through `src/lib/crm/repo.ts`.
-- Reads use the real-time hooks in `src/lib/crm/hooks.ts`; writes use the repo
-  helpers. Calculations belong in pure, unit-tested modules
-  (`metrics.ts`, `pipeline.ts`) that take `now` as a parameter.
+- Reads use the real-time hooks in `src/lib/crm/hooks.ts` (or `useCrmData`);
+  writes use the repo helpers, and multi-document writes use
+  `src/lib/crm/mutations.ts` (batched, at most 500 per batch). Calculations
+  belong in pure, unit-tested modules (`metrics.ts`, `pipeline.ts`,
+  `contacts-table.ts`, `tasks.ts`, `cascade.ts`) that take `now` as a
+  parameter.
+- Deletes go through `CascadeDeleteDialog`: it shows what else is removed,
+  deletes in batches and offers Undo. Every create, update and delete shows a
+  toast.
+- List filters, sorting and pagination live in the URL search params.
 - When a schema in `src/lib/crm/` changes, update `firestore.rules` to match
   (field list, types and limits from `src/lib/crm/limits.ts`).
 
@@ -47,6 +61,15 @@ product, but it is a demo.
   (light and dark). Every chart needs an accessible name and a visually hidden
   data table.
 
+## UI conventions
+
+- Every page has a unique, meaningful `<title>` (static `metadata`, or
+  `useDocumentTitle` for data-dependent titles such as a contact's name).
+- Loading uses skeletons; failed listeners show `ListenerError` with retry;
+  empty and no-results states use `EmptyState`.
+- Links inside sentences are underlined, not distinguished by colour alone.
+- Run an axe-core audit in both themes for new screens.
+
 ## Definition of done
 
 Run all of these and make sure they pass before declaring a task done:
@@ -55,5 +78,6 @@ Run all of these and make sure they pass before declaring a task done:
 npm run lint
 npm run format:check
 npm test
+npm run test:rules   # needs Java 21+ (Firestore emulator)
 npm run build
 ```

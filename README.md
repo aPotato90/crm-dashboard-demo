@@ -12,6 +12,12 @@ time. Signing out deletes the sandbox.
 
 ![PipelineHQ pipeline board in dark mode](docs/screenshots/pipeline-dark-1280.png)
 
+| Contacts                                                    | Contact detail                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Contacts table](docs/screenshots/contacts-light-1280.png) | ![Contact detail](docs/screenshots/contact-light-1280.png)          |
+| **Company detail (dark)**                                   | **Tasks**                                                           |
+| ![Company detail](docs/screenshots/company-dark-1280.png)   | ![Tasks grouped by due date](docs/screenshots/tasks-light-1280.png) |
+
 More screenshots (375, 768 and 1280 px, light and dark) are in
 [`docs/screenshots/`](docs/screenshots/).
 
@@ -25,9 +31,27 @@ More screenshots (375, 768 and 1280 px, light and dark) are in
   (press and hold) or keyboard, with screen-reader announcements. Moves save
   instantly (optimistic UI, rolled back if a write fails). Create, edit and
   delete deals in a validated dialog; search and filter by owner.
+- **Contacts:** a sortable, filterable table (search, status, source,
+  owner) with 25-per-page pagination, all kept in the URL so views survive
+  reloads and can be shared; stacked cards on small screens. Contact pages
+  have Overview, Activity (timeline plus "Add activity"), Deals and Tasks
+  tabs.
+- **Companies:** cards with contact counts and deal value, search and an
+  industry filter; company pages with contacts, deals and a deal-value-by-
+  stage chart.
+- **Tasks:** grouped into Overdue, Today, This week, Later and Completed, with
+  tick-to-complete, create, edit and delete.
+- **Safe deletes:** deleting a company or contact also deletes what depends
+  on it (contacts, deals, activities, tasks) in batched writes. The confirm
+  dialog lists exactly what will go, and every delete can be undone from the
+  toast.
+- **Search:** a command palette (Cmd/Ctrl+K, or the Search button) across
+  contacts, companies, deals and pages.
 - **App shell:** sidebar navigation (a menu sheet on small screens), light /
-  dark / system theme without a flash, and a visible Demo banner on every
-  page.
+  dark / system theme without a flash, toasts for every change, error states
+  with retry, and a visible Demo banner on every page.
+- **About page and social preview:** `/about` explains what the demo shows;
+  the landing page has Open Graph metadata and a generated social image.
 - **Accessibility:** semantic landmarks, skip link, focus moved to the page
   after navigation, visible focus, WCAG AA contrast (checked with axe-core
   in both themes), `prefers-reduced-motion`, and a data table behind every
@@ -57,9 +81,14 @@ More screenshots (375, 768 and 1280 px, light and dark) are in
 - `src/lib/crm/hooks.ts` wraps real-time `onSnapshot` listeners in small hooks
   (`useDeals`, `useContacts`, ...) with loading and error states. All writes go
   through the repo.
-- `src/lib/crm/metrics.ts` (dashboard numbers) and `src/lib/crm/pipeline.ts`
-  (board grouping and drag-and-drop write plans) are pure functions with unit
+- `src/lib/crm/metrics.ts` (dashboard numbers), `pipeline.ts` (board grouping
+  and drag-and-drop write plans), `contacts-table.ts` (URL query, filters,
+  sorting, pagination), `companies-list.ts`, `tasks.ts` (due-date groups) and
+  `cascade.ts` (what a delete removes or unlinks) are pure functions with unit
   tests.
+- `src/lib/crm/mutations.ts` applies multi-document writes in batches of at
+  most 500: cascade deletes, their Undo, and logging an activity together with
+  the contact's "last contacted" time.
 - All data lives under `users/{uid}/...`, so each visitor has a private
   sandbox. `firestore.rules` only lets the signed-in owner read or write it.
 - On first entry to `/app`, the sandbox is seeded from a deterministic
@@ -96,6 +125,7 @@ Copy `.env.example` to `.env.local` and fill it in:
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId`                                  |
 | `NEXT_PUBLIC_FIREBASE_APP_ID`              | `appId`                                              |
 | `NEXT_PUBLIC_PORTFOLIO_URL`                | Link to the developer's portfolio (optional)         |
+| `NEXT_PUBLIC_SITE_URL`                     | Public URL of the deployment, for Open Graph links   |
 | `NEXT_PUBLIC_FIREBASE_USE_EMULATORS`       | `true` to use the local emulators instead (optional) |
 
 The `NEXT_PUBLIC_FIREBASE_*` values identify your project and end up in the
