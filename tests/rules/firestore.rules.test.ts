@@ -269,3 +269,105 @@ describe("validation", () => {
     await assertSucceeds(put({ contactId: null, dealId: null }));
   });
 });
+
+describe("pipeline and dashboard write patterns", () => {
+  const dealPath = (id: string) => `users/${ALICE}/deals/${id}`;
+
+  async function seedDeals(db: Firestore) {
+    const open = data.deals.filter((d) => d.closedAt === null).slice(0, 3);
+    const won = data.deals.find((d) => d.stage === "won")!;
+    for (const item of [...open, won]) {
+      await setDoc(doc(db, dealPath(item.id)), stored(item));
+    }
+    return { open, won };
+  }
+
+  it("accepts a batched reorder that only touches `order`", async () => {
+    const db = dbFor(ALICE);
+    const { open } = await seedDeals(db);
+    const batch = writeBatch(db);
+    open.forEach((item, i) =>
+      batch.update(doc(db, dealPath(item.id)), { order: i * 1000 }),
+    );
+    await assertSucceeds(batch.commit());
+  });
+
+  it("accepts a batched cross-stage move into Won with closedAt", async () => {
+    const db = dbFor(ALICE);
+    const { open, won } = await seedDeals(db);
+    const batch = writeBatch(db);
+    batch.update(doc(db, dealPath(open[0].id)), {
+      stage: "won",
+      probability: 100,
+      closedAt: Timestamp.now(),
+      order: 0,
+    });
+    batch.update(doc(db, dealPath(won.id)), { order: 1000 });
+    await assertSucceeds(batch.commit());
+  });
+
+  it("rejects the whole batch if one card moves to Won without closedAt", async () => {
+    const db = dbFor(ALICE);
+    const { open } = await seedDeals(db);
+    const batch = writeBatch(db);
+    batch.update(doc(db, dealPath(open[0].id)), { order: 5000 });
+    batch.update(doc(db, dealPath(open[1].id)), { stage: "lost", order: 0 });
+    await assertFails(batch.commit());
+  });
+
+  it("accepts moving a closed deal back to an open stage with closedAt cleared", async () => {
+    const db = dbFor(ALICE);
+    const { won } = await seedDeals(db);
+    await assertFails(
+      updateDoc(doc(db, dealPath(won.id)), {
+        stage: "proposal",
+        probability: 50,
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, dealPath(won.id)), {
+        stage: "proposal",
+        probability: 50,
+        closedAt: null,
+      }),
+    );
+  });
+
+  it("accepts creating a deal with an auto id and deleting it", async () => {
+    const db = dbFor(ALICE);
+    const ref = doc(collection(db, `users/${ALICE}/deals`));
+    await assertSucceeds(
+      setDoc(ref, {
+        ...openDeal,
+        title: "New deal from the dialog",
+        order: -1000,
+      }),
+    );
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  it("accepts ticking a task done and undone, nothing else", async () => {
+    const db = dbFor(ALICE);
+    const ref = doc(db, `users/${ALICE}/tasks/t1`);
+    await setDoc(ref, task);
+    await assertSucceeds(updateDoc(ref, { done: true }));
+    await assertSucceeds(updateDoc(ref, { done: false }));
+    await assertFails(updateDoc(ref, { done: 1 }));
+    await assertFails(updateDoc(ref, { priority: "high" }));
+  });
+
+  it("lets the owner delete the whole sandbox, including meta/state", async () => {
+    const db = dbFor(ALICE);
+    await seedDeals(db);
+    await setDoc(doc(db, `users/${ALICE}/meta/state`), {
+      seeded: true,
+      seededAt: Timestamp.now(),
+    });
+    const deals = await getDocs(collection(db, `users/${ALICE}/deals`));
+    const batch = writeBatch(db);
+    deals.forEach((snapshot) => batch.delete(snapshot.ref));
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(deleteDoc(doc(db, `users/${ALICE}/meta/state`)));
+    await assertFails(deleteDoc(doc(dbFor(BOB), `users/${ALICE}/meta/state`)));
+  });
+});

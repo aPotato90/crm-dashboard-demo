@@ -13,12 +13,14 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
   deleteDoc,
   updateDoc,
+  writeBatch,
   type CollectionReference,
   type DocumentData,
   type DocumentReference,
@@ -52,6 +54,14 @@ export type SandboxCollection = (typeof SANDBOX_COLLECTIONS)[number];
 // Generic per-collection repository.
 // ---------------------------------------------------------------------------
 
+export type SubscribeOptions = {
+  /** Only the newest `limit` documents. */
+  limit?: number;
+};
+
+/** Firestore allows at most 500 writes per batch. */
+export const MAX_WRITES_PER_BATCH = 500;
+
 export type EntityRepo<T extends Record<string, unknown>> = {
   /** Typed collection reference for `users/{uid}/{name}`. */
   collectionRef(uid: string): CollectionReference<WithId<T>, DocumentData>;
@@ -68,11 +78,20 @@ export type EntityRepo<T extends Record<string, unknown>> = {
   update(uid: string, id: string, patch: Partial<T>): Promise<void>;
   remove(uid: string, id: string): Promise<void>;
   count(uid: string): Promise<number>;
+  /**
+   * Validates and applies several partial updates in one batched write
+   * (split into batches of 500 if needed).
+   */
+  updateMany(
+    uid: string,
+    updates: { id: string; patch: Partial<T> }[],
+  ): Promise<void>;
   /** Live list, newest first. Returns the unsubscribe function. */
   subscribe(
     uid: string,
     onData: (items: WithId<T>[]) => void,
     onError?: (error: Error) => void,
+    options?: SubscribeOptions,
   ): Unsubscribe;
 };
 
@@ -121,10 +140,39 @@ function createEntityRepo<T extends Record<string, unknown>>(
       const snapshot = await getCountFromServer(collectionRef(uid));
       return snapshot.data().count;
     },
-    subscribe(uid, onData, onError) {
+    async updateMany(uid, updates) {
+      const db = requireDb();
+      const parsed = updates.map(({ id, patch }) => ({
+        ref: doc(db, "users", uid, name, id),
+        data: toFirestoreData(patchSchema.parse(patch)),
+      }));
+      for (let i = 0; i < parsed.length; i += MAX_WRITES_PER_BATCH) {
+        const batch = writeBatch(db);
+        for (const { ref, data } of parsed.slice(i, i + MAX_WRITES_PER_BATCH)) {
+          batch.update(ref, data);
+        }
+        await batch.commit();
+      }
+    },
+    subscribe(uid, onData, onError, options) {
+      const base = newestFirst(uid);
+      const q = options?.limit ? query(base, limit(options.limit)) : base;
       return onSnapshot(
-        newestFirst(uid),
-        (snapshot) => onData(snapshot.docs.map((d) => d.data())),
+        q,
+        (snapshot) => {
+          // Converters validate every document; report bad data as an error
+          // instead of throwing inside the listener.
+          let items: WithId<T>[];
+          try {
+            items = snapshot.docs.map((d) => d.data());
+          } catch (error) {
+            onError?.(
+              error instanceof Error ? error : new Error(String(error)),
+            );
+            return;
+          }
+          onData(items);
+        },
         (error) => onError?.(error),
       );
     },

@@ -21,6 +21,7 @@ import {
   contactsRepo,
   dealsRepo,
   getSandboxState,
+  MAX_WRITES_PER_BATCH as MAX_BATCH_WRITES,
   sandboxCollectionRef,
   sandboxStateRef,
   SANDBOX_COLLECTIONS,
@@ -37,8 +38,7 @@ export {
   type DemoData,
 } from "./seed-generator";
 
-/** Firestore allows at most 500 writes per batch. */
-export const MAX_BATCH_WRITES = 500;
+export { MAX_WRITES_PER_BATCH as MAX_BATCH_WRITES } from "./repo";
 
 /** One queued write; applied to whichever batch it lands in. */
 type Write = (batch: WriteBatch) => void;
