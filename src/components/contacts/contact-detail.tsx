@@ -198,7 +198,11 @@ export function ContactDetail() {
                   {" at "}
                   <Link
                     href={`/app/companies/${company.id}`}
-                    className={cn(linkClass, "text-foreground")}
+                    // Inline in a sentence: underlined, not just coloured.
+                    className={cn(
+                      linkClass,
+                      "text-foreground underline decoration-current/40 hover:decoration-current",
+                    )}
                   >
                     {company.name}
                   </Link>

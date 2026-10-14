@@ -191,7 +191,7 @@ export function ActivityTimeline({
                     <span className="text-muted-foreground"> · </span>
                     <Link
                       href={`/app/pipeline?deal=${activity.dealId}`}
-                      className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                      className="text-muted-foreground underline decoration-current/40 underline-offset-4 hover:text-foreground hover:decoration-current"
                     >
                       {dealTitle}
                     </Link>

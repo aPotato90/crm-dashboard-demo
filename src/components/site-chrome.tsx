@@ -20,16 +20,18 @@ export function SiteHeader() {
           <nav aria-label="Site" className="flex items-center">
             <Link
               href="/about"
-              className={cn(buttonVariants({ variant: "ghost" }))}
+              className={cn(buttonVariants({ variant: "ghost" }), "px-2")}
             >
               About
             </Link>
             {portfolioUrl && (
               <a
                 href={portfolioUrl}
-                className={cn(buttonVariants({ variant: "ghost" }))}
+                aria-label="Portfolio"
+                className={cn(buttonVariants({ variant: "ghost" }), "px-2")}
               >
-                Portfolio
+                {/* Icon only on narrow screens; the label stays accessible. */}
+                <span className="hidden sm:inline">Portfolio</span>
                 <ArrowUpRightIcon aria-hidden />
               </a>
             )}

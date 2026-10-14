@@ -122,7 +122,7 @@ export function TaskItem({
               ·{" "}
               <Link
                 href={`/app/contacts/${contact.id}`}
-                className="underline-offset-4 hover:text-foreground hover:underline"
+                className="underline decoration-current/40 underline-offset-4 hover:text-foreground hover:decoration-current"
               >
                 {contact.name}
               </Link>
