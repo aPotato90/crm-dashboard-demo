@@ -1,0 +1,211 @@
+rules_version = '2';
+
+// PipelineHQ (Demo) — Firestore security rules.
+//
+// Every visitor signs in anonymously and gets a private sandbox under
+// users/{uid}/... Nothing else in the database is readable or writable.
+//
+// Field limits mirror src/lib/crm/limits.ts and the Zod schemas in
+// src/lib/crm/. If you change one, change the other.
+//
+// Paste this file into Firebase console > Firestore Database > Rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    // The caller is signed in (anonymous counts) as the sandbox owner.
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // The written document has exactly these fields: no missing required
+    // fields and no unknown ones.
+    function hasExactFields(fields) {
+      let keys = request.resource.data.keys();
+      return keys.hasAll(fields) && keys.hasOnly(fields);
+    }
+
+    // A string with a length in [min, max].
+    function isString(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    // A string of at most `max` characters that is not just whitespace.
+    function isNonBlank(value, max) {
+      return isString(value, 1, max) && value.trim().size() > 0;
+    }
+
+    // A reference to another document id (LIMITS.idMax = 128).
+    function isId(value) {
+      return isString(value, 1, 128);
+    }
+
+    function isNullableId(value) {
+      return value == null || isId(value);
+    }
+
+    // Tags: at most 20 strings of 1 to 40 characters each. Rules have no
+    // loops, so each possible index is checked explicitly. The check is kept
+    // minimal (no trim) to stay well under the 1,000-expression limit that
+    // Firestore applies to each rules evaluation.
+    function isTagAt(tags, i) {
+      return tags.size() <= i
+        || (tags[i] is string && tags[i].size() >= 1 && tags[i].size() <= 40);
+    }
+
+    function isTagList(tags) {
+      return tags is list && tags.size() <= 20
+        && isTagAt(tags, 0) && isTagAt(tags, 1) && isTagAt(tags, 2)
+        && isTagAt(tags, 3) && isTagAt(tags, 4) && isTagAt(tags, 5)
+        && isTagAt(tags, 6) && isTagAt(tags, 7) && isTagAt(tags, 8)
+        && isTagAt(tags, 9) && isTagAt(tags, 10) && isTagAt(tags, 11)
+        && isTagAt(tags, 12) && isTagAt(tags, 13) && isTagAt(tags, 14)
+        && isTagAt(tags, 15) && isTagAt(tags, 16) && isTagAt(tags, 17)
+        && isTagAt(tags, 18) && isTagAt(tags, 19);
+    }
+
+    // -----------------------------------------------------------------------
+    // Per-entity validation. `data` is the document as it will be stored
+    // (request.resource.data), so these work for creates and full or partial
+    // updates alike.
+    // -----------------------------------------------------------------------
+
+    // users/{uid}/companies/{companyId}
+    function isValidCompany(data) {
+      return hasExactFields(['name', 'industry', 'size', 'website', 'createdAt'])
+        && isNonBlank(data.name, 120)
+        && isNonBlank(data.industry, 60)
+        && data.size in ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']
+        // Empty, or an http(s) URL of up to 200 characters.
+        && (data.website == ''
+          || (isString(data.website, 1, 200) && data.website.matches('^https?://[^\\s]+$')))
+        && data.createdAt is timestamp;
+    }
+
+    // users/{uid}/contacts/{contactId}
+    function isValidContact(data) {
+      return hasExactFields([
+          'firstName', 'lastName', 'email', 'phone', 'companyId', 'jobTitle',
+          'status', 'source', 'ownerName', 'tags', 'createdAt', 'lastContactedAt'
+        ])
+        && isNonBlank(data.firstName, 120)
+        && isNonBlank(data.lastName, 120)
+        // A loose shape check; the app validates emails more strictly.
+        && isString(data.email, 3, 254)
+        && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && isString(data.phone, 0, 40)
+        && isId(data.companyId)
+        && isString(data.jobTitle, 0, 120)
+        && data.status in ['lead', 'prospect', 'customer', 'inactive']
+        && data.source in ['website', 'referral', 'linkedin', 'event', 'cold-call']
+        && isNonBlank(data.ownerName, 120)
+        && isTagList(data.tags)
+        && data.createdAt is timestamp
+        && data.lastContactedAt is timestamp;
+    }
+
+    // users/{uid}/deals/{dealId}
+    function isValidDeal(data) {
+      return hasExactFields([
+          'title', 'contactId', 'companyId', 'value', 'stage', 'probability',
+          'expectedCloseDate', 'closedAt', 'order', 'createdAt'
+        ])
+        && isNonBlank(data.title, 120)
+        && isId(data.contactId)
+        && isId(data.companyId)
+        // USD, capped at 100,000,000.
+        && data.value is number && data.value >= 0 && data.value <= 100000000
+        && data.stage in ['new', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
+        && data.probability is int && data.probability >= 0 && data.probability <= 100
+        && data.expectedCloseDate is timestamp
+        // closedAt is set exactly when the deal is won or lost.
+        && (data.closedAt == null || data.closedAt is timestamp)
+        && ((data.stage in ['won', 'lost']) == (data.closedAt != null))
+        // Sort key inside a pipeline column; bounded to keep it sane.
+        && data.order is number && data.order >= -1000000000 && data.order <= 1000000000
+        && data.createdAt is timestamp;
+    }
+
+    // users/{uid}/activities/{activityId}
+    function isValidActivity(data) {
+      return hasExactFields(['type', 'contactId', 'dealId', 'summary', 'createdAt'])
+        && data.type in ['call', 'email', 'meeting', 'note']
+        && isId(data.contactId)
+        && isNullableId(data.dealId)
+        && isNonBlank(data.summary, 1000)
+        && data.createdAt is timestamp;
+    }
+
+    // users/{uid}/tasks/{taskId}
+    function isValidTask(data) {
+      return hasExactFields(['title', 'dueDate', 'done', 'contactId', 'dealId', 'createdAt'])
+        && isNonBlank(data.title, 200)
+        && data.dueDate is timestamp
+        && data.done is bool
+        && isNullableId(data.contactId)
+        && isNullableId(data.dealId)
+        && data.createdAt is timestamp;
+    }
+
+    // users/{uid}/meta/state
+    function isValidSandboxState(data) {
+      return hasExactFields(['seeded', 'seededAt'])
+        && data.seeded is bool
+        && (data.seededAt == null || data.seededAt is timestamp);
+    }
+
+    // -----------------------------------------------------------------------
+    // Sandbox paths. Anything not matched below is denied by default,
+    // including users/{uid} itself and any other sub-collection.
+    // -----------------------------------------------------------------------
+
+    match /users/{uid} {
+
+      // Companies: the owner can read, delete, and write valid documents.
+      match /companies/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isId(docId)
+          && isValidCompany(request.resource.data);
+      }
+
+      // Contacts.
+      match /contacts/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isId(docId)
+          && isValidContact(request.resource.data);
+      }
+
+      // Deals.
+      match /deals/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isId(docId)
+          && isValidDeal(request.resource.data);
+      }
+
+      // Activities (calls, emails, meetings, notes).
+      match /activities/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isId(docId)
+          && isValidActivity(request.resource.data);
+      }
+
+      // Tasks.
+      match /tasks/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && isId(docId)
+          && isValidTask(request.resource.data);
+      }
+
+      // Sandbox metadata: only the single `state` document exists.
+      match /meta/{docId} {
+        allow read, delete: if isOwner(uid) && docId == 'state';
+        allow create, update: if isOwner(uid) && docId == 'state'
+          && isValidSandboxState(request.resource.data);
+      }
+    }
+  }
+}
