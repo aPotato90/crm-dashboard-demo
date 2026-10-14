@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/components/app/coming-soon";
+import { ContentSkeleton } from "@/components/app/app-skeleton";
+import { CompaniesPage } from "@/components/companies/companies-page";
 
 // Rendered only in the browser behind the auth gate (see ../layout.tsx).
 export const instant = false;
 
 export const metadata: Metadata = { title: "Companies" };
 
-export default function CompaniesPage() {
+export default function Page() {
+  // Search and industry filter live in the URL (useSearchParams needs Suspense).
   return (
-    <ComingSoon
-      title="Companies"
-      description="Accounts, industries and team sizes."
-    />
+    <Suspense fallback={<ContentSkeleton />}>
+      <CompaniesPage />
+    </Suspense>
   );
 }

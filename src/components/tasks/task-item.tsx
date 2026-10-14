@@ -111,7 +111,7 @@ export function TaskItem({
               overdue && "font-medium text-red-700 dark:text-red-400",
             )}
           >
-            {overdue ? "was due " : "Due "}
+            {overdue ? "· due " : "Due "}
             <time dateTime={task.dueDate.toISOString()}>
               {dueLabel(task.dueDate, now)}
             </time>

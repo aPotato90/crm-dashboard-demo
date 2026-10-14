@@ -44,7 +44,7 @@ import { RecentActivity } from "./recent-activity";
 import { TasksDueSoon } from "./tasks-due-soon";
 
 export function Dashboard() {
-  const { uid, busy } = useSandbox();
+  const { busy } = useSandbox();
   const now = useNow();
   const companies = useCompanies();
   const contacts = useContacts();
@@ -149,7 +149,6 @@ export function Dashboard() {
           <StageChart data={metrics.stages} />
           <TasksDueSoon
             tasks={metrics.dueSoon}
-            uid={uid}
             contactNames={contactNames}
             now={now}
           />

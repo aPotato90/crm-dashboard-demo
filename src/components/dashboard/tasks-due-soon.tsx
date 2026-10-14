@@ -3,14 +3,12 @@
 import { differenceInCalendarDays, format } from "date-fns";
 import { CircleAlertIcon } from "lucide-react";
 import { useId } from "react";
-import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskData, WithId } from "@/lib/crm";
 import { isTaskOverdue } from "@/lib/crm/metrics";
-import { tasksRepo } from "@/lib/crm/repo";
-import { describeFirebaseError } from "@/lib/firebase/errors";
+import { useToggleTask } from "@/components/tasks/task-item";
 import { cn } from "@/lib/utils";
 
 function dueLabel(due: Date, now: Date): string {
@@ -25,29 +23,18 @@ function dueLabel(due: Date, now: Date): string {
 
 function TaskRow({
   task,
-  uid,
   contactName,
   now,
 }: {
   task: WithId<TaskData>;
-  uid: string;
   contactName: string | null;
   now: Date;
 }) {
   const id = useId();
   const overdue = isTaskOverdue(task, now);
 
-  async function toggle(done: boolean) {
-    try {
-      // Firestore applies the write locally first (instant UI) and rolls it
-      // back automatically if the server rejects it.
-      await tasksRepo.update(uid, task.id, { done });
-    } catch (error) {
-      toast.error("Could not update the task", {
-        description: describeFirebaseError(error),
-      });
-    }
-  }
+  const toggleTask = useToggleTask();
+  const toggle = (done: boolean) => toggleTask(task, done);
 
   return (
     <li className="flex items-start gap-3 py-2.5">
@@ -94,12 +81,10 @@ function TaskRow({
 
 export function TasksDueSoon({
   tasks,
-  uid,
   contactNames,
   now,
 }: {
   tasks: WithId<TaskData>[];
-  uid: string;
   contactNames: Map<string, string>;
   now: Date;
 }) {
@@ -121,7 +106,6 @@ export function TasksDueSoon({
               <TaskRow
                 key={task.id}
                 task={task}
-                uid={uid}
                 now={now}
                 contactName={
                   task.contactId
