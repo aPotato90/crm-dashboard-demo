@@ -46,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async () => {
     const firebaseAuth = requireAuth();
+    // Wait for a persisted session to be restored first, so a returning
+    // visitor keeps their sandbox instead of getting a new anonymous user.
+    await firebaseAuth.authStateReady();
     if (firebaseAuth.currentUser) return firebaseAuth.currentUser;
     const credential = await signInAnonymously(firebaseAuth);
     return credential.user;

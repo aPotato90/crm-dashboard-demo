@@ -1,69 +1,185 @@
-import Image from "next/image";
+import {
+  ArrowUpRightIcon,
+  BarChart3Icon,
+  KanbanSquareIcon,
+  LockKeyholeIcon,
+  UsersIcon,
+} from "lucide-react";
 
-export default function Home() {
+import { Brand } from "@/components/brand";
+import { FirebaseNotConfigured } from "@/components/firebase-not-configured";
+import { ExploreDemoButton } from "@/components/landing/explore-demo-button";
+import { ProductPreview } from "@/components/landing/product-preview";
+import { buttonVariants } from "@/components/ui/button";
+import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { DEVELOPER_NAME, portfolioUrl } from "@/lib/site";
+import { cn } from "@/lib/utils";
+
+const FEATURES = [
+  {
+    icon: KanbanSquareIcon,
+    title: "Visual deal pipeline",
+    description:
+      "Drag deals from New to Won on a board that shows value and win probability at every stage.",
+  },
+  {
+    icon: UsersIcon,
+    title: "Contacts and companies",
+    description:
+      "Every person, company, call, email and meeting in one timeline, so follow-ups never slip.",
+  },
+  {
+    icon: BarChart3Icon,
+    title: "Revenue insights",
+    description:
+      "Monthly revenue, win rate and forecast charts that update as soon as a deal moves.",
+  },
+] as const;
+
+const STEPS = [
+  "Click “Explore the demo”. You get an anonymous session, no sign-up.",
+  "A private sandbox is filled with fictional companies, contacts and deals.",
+  "Change anything you like. Reset the demo data at any time.",
+] as const;
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-white px-16 py-32 sm:items-start dark:bg-black">
-        <Image
-          className="h-5 w-[100px] dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl leading-10 font-semibold tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <header className="border-b">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Brand />
+          {portfolioUrl && (
+            <nav aria-label="Site">
+              <a
+                href={portfolioUrl}
+                className={cn(buttonVariants({ variant: "ghost" }))}
+              >
+                Portfolio
+                <ArrowUpRightIcon aria-hidden />
+              </a>
+            </nav>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] md:w-[158px] dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      <main id="main" className="flex-1">
+        <section
+          aria-labelledby="hero-title"
+          className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:py-24"
+        >
+          <div>
+            <p className="inline-flex items-center rounded-full border bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+              Portfolio demo · Next.js, TypeScript, Firebase
+            </p>
+            <h1
+              id="hero-title"
+              className="mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
+            >
+              PipelineHQ <span className="text-muted-foreground">(Demo)</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-lg text-pretty text-muted-foreground">
+              The calm, fast CRM that keeps every lead, deal and follow-up in
+              one pipeline your whole sales team can trust.
+            </p>
+
+            <div className="mt-8 flex flex-col items-start gap-4">
+              {isFirebaseConfigured ? (
+                <ExploreDemoButton />
+              ) : (
+                <div className="w-full max-w-xl">
+                  <FirebaseNotConfigured />
+                </div>
+              )}
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <LockKeyholeIcon aria-hidden className="size-4 shrink-0" />
+                Fake data only. Your sandbox is private to you.
+              </p>
+            </div>
+          </div>
+
+          <ProductPreview />
+        </section>
+
+        <section
+          aria-labelledby="features-title"
+          className="border-y bg-muted/40"
+        >
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <h2
+              id="features-title"
+              className="text-2xl font-semibold tracking-tight sm:text-3xl"
+            >
+              Everything a small sales team needs
+            </h2>
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              Built like a real SaaS product: typed data model, per-user
+              security rules and an accessible, responsive interface.
+            </p>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map(({ icon: Icon, title, description }) => (
+                <li
+                  key={title}
+                  className="rounded-xl border bg-card p-6 text-card-foreground shadow-xs"
+                >
+                  <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon aria-hidden className="size-5" />
+                  </span>
+                  <h3 className="mt-4 font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    {description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="how-title"
+          className="mx-auto max-w-6xl px-4 py-16 sm:px-6"
+        >
+          <h2
+            id="how-title"
+            className="text-2xl font-semibold tracking-tight sm:text-3xl"
           >
-            <Image
-              className="h-[14px] w-4 dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            How the demo works
+          </h2>
+          <ol className="mt-8 grid gap-6 sm:grid-cols-3">
+            {STEPS.map((step, i) => (
+              <li key={step} className="flex gap-4">
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-sm font-medium"
+                >
+                  {i + 1}
+                </span>
+                <p className="pt-1 text-sm text-muted-foreground">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
       </main>
-    </div>
+
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>
+            Built by{" "}
+            {portfolioUrl ? (
+              <a
+                href={portfolioUrl}
+                className="font-medium text-foreground underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                {DEVELOPER_NAME}
+              </a>
+            ) : (
+              <span className="font-medium text-foreground">
+                {DEVELOPER_NAME}
+              </span>
+            )}
+          </p>
+          <p>PipelineHQ is a demo. All names and data are fictional.</p>
+        </div>
+      </footer>
+    </>
   );
 }

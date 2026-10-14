@@ -7,8 +7,12 @@
  * "Firebase is not configured" screen instead of crashing.
  */
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  type Firestore,
+} from "firebase/firestore";
 
 import { firebaseConfig, isFirebaseConfigured } from "./config";
 
@@ -27,6 +31,16 @@ export const auth: Auth | null = app ? getAuth(app) : null;
 
 /** Firestore, or `null` when Firebase is not configured. */
 export const db: Firestore | null = app ? getFirestore(app) : null;
+
+// Local development against the Firebase Emulator Suite (`npm run
+// emulators`). Opt-in only; production builds never set this.
+const useEmulators = process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATORS === "true";
+const globalForEmulators = globalThis as { __pipelinehqEmulators?: boolean };
+if (useEmulators && auth && db && !globalForEmulators.__pipelinehqEmulators) {
+  globalForEmulators.__pipelinehqEmulators = true;
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
 
 export class FirebaseNotConfiguredError extends Error {
   constructor() {
