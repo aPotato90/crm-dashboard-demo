@@ -459,7 +459,12 @@ export function generateDemoData(options: GenerateOptions = {}): DemoData {
         stage as Exclude<DealStage, "won" | "lost">
       ];
       createdAt = between(rng, daysAgo(now, maxAge), daysAgo(now, 2));
-      expectedCloseDate = new Date(now.getTime() + rng.int(7, 90) * DAY_MS);
+      // Most open deals close in the future; a few have slipped past their
+      // expected date (shown as overdue on the board).
+      expectedCloseDate =
+        stageIndex === 0 && (stage === "proposal" || stage === "negotiation")
+          ? new Date(now.getTime() - rng.int(2, 12) * DAY_MS)
+          : new Date(now.getTime() + rng.int(7, 90) * DAY_MS);
     }
 
     // A contact can't have a deal before they were added to the CRM.

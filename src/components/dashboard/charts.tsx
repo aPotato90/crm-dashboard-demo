@@ -56,7 +56,7 @@ export function RevenueChart({ data }: { data: MonthlyRevenue[] }) {
     >
       <ChartContainer
         config={revenueConfig}
-        className="aspect-auto h-64 w-full"
+        className="aspect-auto h-64 w-full lg:h-80"
       >
         <BarChart
           data={data}
