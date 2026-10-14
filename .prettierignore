@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+build
+coverage
+package-lock.json
+next-env.d.ts
+# Generated and re-added by `next dev`; keep it byte-identical.
+AGENTS.md
