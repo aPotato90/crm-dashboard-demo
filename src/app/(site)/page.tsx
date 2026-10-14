@@ -1,20 +1,15 @@
 import {
-  ArrowUpRightIcon,
   BarChart3Icon,
   KanbanSquareIcon,
   ListChecksIcon,
   LockKeyholeIcon,
 } from "lucide-react";
 
-import { Brand } from "@/components/brand";
 import { FirebaseNotConfigured } from "@/components/firebase-not-configured";
 import { ExploreDemoButton } from "@/components/landing/explore-demo-button";
 import { ProductPreview } from "@/components/landing/product-preview";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button";
+import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { DEVELOPER_NAME, portfolioUrl } from "@/lib/site";
-import { cn } from "@/lib/utils";
 
 const FEATURES = [
   {
@@ -46,25 +41,7 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <>
-      <header className="border-b">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Brand />
-          <div className="flex items-center gap-1">
-            {portfolioUrl && (
-              <nav aria-label="Site">
-                <a
-                  href={portfolioUrl}
-                  className={cn(buttonVariants({ variant: "ghost" }))}
-                >
-                  Portfolio
-                  <ArrowUpRightIcon aria-hidden />
-                </a>
-              </nav>
-            )}
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         <section
@@ -165,26 +142,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>
-            Built by{" "}
-            {portfolioUrl ? (
-              <a
-                href={portfolioUrl}
-                className="font-medium text-foreground underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              >
-                {DEVELOPER_NAME}
-              </a>
-            ) : (
-              <span className="font-medium text-foreground">
-                {DEVELOPER_NAME}
-              </span>
-            )}
-          </p>
-          <p>PipelineHQ is a demo. All names and data are fictional.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

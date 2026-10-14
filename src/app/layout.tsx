@@ -7,6 +7,7 @@ import { ThemeSync } from "@/components/theme-sync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/firebase/auth-provider";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 import { THEME_SCRIPT } from "@/lib/theme/script";
 
 import "./globals.css";
@@ -22,13 +23,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for Open Graph URLs. Set NEXT_PUBLIC_SITE_URL in production;
+  // the localhost fallback keeps local builds quiet.
+  metadataBase: new URL(siteUrl ?? "http://localhost:3000"),
   title: {
-    default: "PipelineHQ (Demo) — CRM dashboard demo",
-    template: "%s · PipelineHQ (Demo)",
+    default: `${SITE_NAME} — CRM dashboard demo`,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    "A portfolio demo of a CRM dashboard built with Next.js, TypeScript and Firebase. Fake data only.",
+  description: SITE_DESCRIPTION,
   robots: { index: false, follow: true },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — CRM dashboard demo`,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — CRM dashboard demo`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

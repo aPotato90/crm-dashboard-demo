@@ -1,4 +1,5 @@
 import { AppGate } from "@/components/app/app-gate";
+import { DynamicMarker } from "@/components/dynamic-marker";
 
 /**
  * Everything under /app needs a signed-in (anonymous) Firebase user and reads
@@ -10,5 +11,14 @@ import { AppGate } from "@/components/app/app-gate";
 export const instant = false;
 
 export default function AppLayout({ children }: LayoutProps<"/app">) {
-  return <AppGate>{children}</AppGate>;
+  return (
+    <>
+      {/* Detail routes (/app/contacts/[id], ...) resolve metadata from
+          runtime params. The gate never renders pages on the server, so this
+          marker, rendered beside it, tells Next.js that request-time
+          rendering is intentional. The skeleton shell still prerenders. */}
+      <DynamicMarker />
+      <AppGate>{children}</AppGate>
+    </>
+  );
 }
