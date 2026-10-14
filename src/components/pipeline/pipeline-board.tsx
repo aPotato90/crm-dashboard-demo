@@ -16,14 +16,14 @@ import {
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/page-header";
 import { useSandbox } from "@/components/app/sandbox-provider";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ListenerError } from "@/components/app/listener-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -423,11 +423,15 @@ export function PipelineBoard() {
       </search>
 
       {error ? (
-        <Alert variant="destructive" className="mt-6 px-4 py-3">
-          <TriangleAlertIcon aria-hidden />
-          <AlertTitle>Could not load the pipeline</AlertTitle>
-          <AlertDescription>{describeFirebaseError(error)}</AlertDescription>
-        </Alert>
+        <div className="mt-6">
+          <ListenerError
+            error={error}
+            title="Could not load the pipeline"
+            onRetry={() =>
+              [deals, contacts, companies].forEach((c) => c.error && c.retry())
+            }
+          />
+        </div>
       ) : loading || busy ? (
         <BoardSkeleton />
       ) : (

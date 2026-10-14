@@ -1,11 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-  DatabaseIcon,
-  KanbanSquareIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { DatabaseIcon, KanbanSquareIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -13,7 +9,7 @@ import { ContentSkeleton } from "@/components/app/app-skeleton";
 import { PageHeader } from "@/components/app/page-header";
 import { useResetDemoData } from "@/components/app/sandbox-actions";
 import { useSandbox } from "@/components/app/sandbox-provider";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ListenerError } from "@/components/app/listener-error";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useNow } from "@/hooks/use-now";
 import {
@@ -36,7 +32,6 @@ import {
   winRateTrend,
   wonRevenueThisMonth,
 } from "@/lib/crm/metrics";
-import { describeFirebaseError } from "@/lib/firebase/errors";
 
 import { RevenueChart, SourceChart, StageChart } from "./charts";
 import { KpiCards } from "./kpi-cards";
@@ -97,11 +92,12 @@ export function Dashboard() {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {header}
-        <Alert variant="destructive" className="mt-8 px-4 py-3">
-          <TriangleAlertIcon aria-hidden />
-          <AlertTitle>Could not load your data</AlertTitle>
-          <AlertDescription>{describeFirebaseError(error)}</AlertDescription>
-        </Alert>
+        <div className="mt-8">
+          <ListenerError
+            error={error}
+            onRetry={() => sources.forEach((s) => s.error && s.retry())}
+          />
+        </div>
       </div>
     );
   }
