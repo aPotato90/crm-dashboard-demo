@@ -1,12 +1,34 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Page-content placeholder: header, KPI tiles and a large panel. */
-export function ContentSkeleton() {
+/**
+ * Page-content placeholder: header, tiles and a large panel. `bare` drops the
+ * page padding and header, for use under an already rendered page header.
+ */
+export function ContentSkeleton({ bare = false }: { bare?: boolean }) {
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <Skeleton className="h-8 w-56 max-w-full" />
-      <Skeleton className="mt-3 h-4 w-80 max-w-full" />
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div
+      aria-busy="true"
+      className={
+        bare ? "w-full" : "mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8"
+      }
+    >
+      {bare ? (
+        <p role="status" className="sr-only">
+          Loading…
+        </p>
+      ) : (
+        <>
+          <Skeleton className="h-8 w-56 max-w-full" />
+          <Skeleton className="mt-3 h-4 w-80 max-w-full" />
+        </>
+      )}
+      <div
+        className={
+          bare
+            ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            : "mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        }
+      >
         {Array.from({ length: 4 }, (_, i) => (
           <Skeleton key={i} className="h-28 rounded-xl" />
         ))}

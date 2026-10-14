@@ -16,13 +16,14 @@ import {
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/page-header";
 import { useSandbox } from "@/components/app/sandbox-provider";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ListenerError } from "@/components/app/listener-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +98,10 @@ export function PipelineBoard() {
   const [search, setSearch] = useState("");
   const [owner, setOwner] = useState("");
   const [dialog, setDialog] = useState<DealDialogState | null>(null);
+  // `?deal=<id>` (from contact and company pages) opens that deal.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const linkedDealId = searchParams.get("deal");
 
   // --- Derived data --------------------------------------------------------
 
@@ -330,6 +335,9 @@ export function PipelineBoard() {
   };
 
   const activeCard = activeId ? cardById.get(activeId) : undefined;
+  const linkedCard = linkedDealId ? cardById.get(linkedDealId) : undefined;
+  const openDialog: DealDialogState | null =
+    dialog ?? (linkedCard ? { mode: "edit", deal: linkedCard } : null);
   const overStage = activeId ? findStage(containers, activeId) : null;
 
   // --- Render --------------------------------------------------------------
@@ -415,11 +423,15 @@ export function PipelineBoard() {
       </search>
 
       {error ? (
-        <Alert variant="destructive" className="mt-6 px-4 py-3">
-          <TriangleAlertIcon aria-hidden />
-          <AlertTitle>Could not load the pipeline</AlertTitle>
-          <AlertDescription>{describeFirebaseError(error)}</AlertDescription>
-        </Alert>
+        <div className="mt-6">
+          <ListenerError
+            error={error}
+            title="Could not load the pipeline"
+            onRetry={() =>
+              [deals, contacts, companies].forEach((c) => c.error && c.retry())
+            }
+          />
+        </div>
       ) : loading || busy ? (
         <BoardSkeleton />
       ) : (
@@ -468,15 +480,19 @@ export function PipelineBoard() {
         </DndContext>
       )}
 
-      {dialog && (
+      {openDialog && (
         <DealDialog
-          key={dialog.mode === "edit" ? dialog.deal.id : "new"}
-          state={dialog}
+          key={openDialog.mode === "edit" ? openDialog.deal.id : "new"}
+          state={openDialog}
           uid={uid}
           contacts={contacts.data}
           companies={companies.data}
           columns={fullColumns}
-          onClose={() => setDialog(null)}
+          onClose={() => {
+            setDialog(null);
+            if (linkedDealId)
+              router.replace("/app/pipeline", { scroll: false });
+          }}
         />
       )}
     </div>

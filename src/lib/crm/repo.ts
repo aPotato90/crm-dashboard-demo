@@ -213,6 +213,15 @@ export const tasksRepo = createEntityRepo<TaskData>(
   taskSchema.partial(),
 );
 
+/** Untyped document reference, for multi-document writes in `mutations.ts`. */
+export function sandboxDocRef(
+  uid: string,
+  name: SandboxCollection,
+  id: string,
+) {
+  return doc(requireDb(), "users", uid, name, id);
+}
+
 /** Untyped collection reference, for bulk maintenance in `seed.ts` only. */
 export function sandboxCollectionRef(uid: string, name: SandboxCollection) {
   return collection(requireDb(), "users", uid, name);

@@ -1,8 +1,9 @@
 "use client";
 
-import { MenuIcon } from "lucide-react";
+import { InfoIcon, MenuIcon } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -16,6 +17,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import {
+  CommandPalette,
+  SearchButton,
+  useCommandPaletteShortcut,
+} from "./command-palette";
 import { NavLinks } from "./nav-links";
 import { SandboxActions } from "./sandbox-actions";
 
@@ -28,6 +34,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const openPalette = useCallback(() => {
+    setMenuOpen(false);
+    setPaletteOpen(true);
+  }, []);
+  useCommandPaletteShortcut(openPalette);
 
   // Move focus to the new page after client-side navigation, so keyboard and
   // screen-reader users start at the content instead of the old link. (Next.js
@@ -47,10 +59,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-16 items-center px-5">
           <Brand href="/app" />
         </div>
+        <div className="px-3 pb-2">
+          <SearchButton onClick={openPalette} />
+        </div>
         <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-2">
           <NavLinks />
         </nav>
         <div className="border-t p-3">
+          <AboutLink />
           <div className="mb-2 flex items-center justify-between px-1">
             <span className="text-xs font-medium text-muted-foreground">
               Appearance
@@ -65,6 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
           <Brand href="/app" />
           <div className="flex items-center gap-1">
+            <SearchButton onClick={openPalette} compact />
             <ThemeToggle />
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
@@ -83,6 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <NavLinks onNavigate={() => setMenuOpen(false)} />
                 </nav>
                 <div className="border-t p-3">
+                  <AboutLink onNavigate={() => setMenuOpen(false)} />
                   <SandboxActions />
                 </div>
               </SheetContent>
@@ -99,6 +117,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
+  );
+}
+
+function AboutLink({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Link
+      href="/about"
+      onNavigate={onNavigate}
+      className="mb-2 flex items-center gap-2 rounded-lg px-1 py-1 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <InfoIcon aria-hidden className="size-3.5" />
+      About this demo
+    </Link>
   );
 }

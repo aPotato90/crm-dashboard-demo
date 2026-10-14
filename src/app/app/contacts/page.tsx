@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/components/app/coming-soon";
+import { ContentSkeleton } from "@/components/app/app-skeleton";
+import { ContactsPage } from "@/components/contacts/contacts-page";
 
 // Rendered only in the browser behind the auth gate (see ../layout.tsx).
 export const instant = false;
 
 export const metadata: Metadata = { title: "Contacts" };
 
-export default function ContactsPage() {
+export default function Page() {
+  // The table reads its filters from the URL (useSearchParams needs Suspense).
   return (
-    <ComingSoon
-      title="Contacts"
-      description="People at the companies you sell to."
-    />
+    <Suspense fallback={<ContentSkeleton />}>
+      <ContactsPage />
+    </Suspense>
   );
 }
