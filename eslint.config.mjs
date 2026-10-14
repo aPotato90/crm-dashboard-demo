@@ -8,6 +8,19 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Formatting is Prettier's job; turn off rules that would conflict with it.
   prettier,
+  {
+    rules: {
+      // Allow `const { id: _id, ...rest } = doc` to drop fields.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          ignoreRestSiblings: true,
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
