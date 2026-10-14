@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 
 import { ComingSoon } from "@/components/app/coming-soon";
 
+// Rendered only in the browser behind the auth gate (see ../layout.tsx).
+export const instant = false;
+
 export const metadata: Metadata = { title: "Tasks" };
 
 export default function TasksPage() {
