@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/native-select";
 import {
   DEAL_STAGES,
-  dealFieldsSchema,
   dealStageSchema,
   isClosedStage,
   LIMITS,
@@ -61,16 +60,17 @@ export type DealDialogState =
   { mode: "create" } | { mode: "edit"; deal: BoardCard };
 
 /**
- * Form schema. Text and enum rules come from the stored deal schema
- * (`dealFieldsSchema`); number and date inputs arrive as strings and are
- * converted here with friendlier messages. The final document is validated
- * again by the repo with `dealSchema` before it is written.
+ * Form schema. Limits and the stage enum come from the stored deal schema
+ * (`LIMITS`, `dealStageSchema`); number and date inputs arrive as strings and
+ * are converted here with friendlier messages. The final document is
+ * validated again by the repo with `dealSchema` before it is written.
  */
 const dealFormSchema = z.object({
-  title: dealFieldsSchema.shape.title.refine(
-    (value) => value.trim().length > 0,
-    "Enter a title",
-  ),
+  title: z
+    .string()
+    .trim()
+    .min(1, "Enter a title")
+    .max(LIMITS.nameMax, `Use at most ${LIMITS.nameMax} characters`),
   contactId: z.string().min(1, "Choose a contact"),
   companyId: z.string().min(1, "Choose a company"),
   value: z

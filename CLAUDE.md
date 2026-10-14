@@ -20,6 +20,8 @@ product, but it is a demo.
   Components or in modules that only Client Components import.
 - `cacheComponents` and `partialPrefetching` are on (see `next.config.ts`).
   Read `node_modules/next/dist/docs/` before using an API you are unsure about.
+- Pages under `/app` render only in the browser behind the auth gate, so each
+  `page.tsx` there (and the layout) exports `instant = false`.
 
 ## Secrets and Firebase
 
@@ -29,6 +31,9 @@ product, but it is a demo.
 - No service accounts, no Firebase Admin SDK.
 - All user data lives under `users/{uid}/...`. Components never build Firestore
   paths themselves: go through `src/lib/crm/repo.ts`.
+- Reads use the real-time hooks in `src/lib/crm/hooks.ts`; writes use the repo
+  helpers. Calculations belong in pure, unit-tested modules
+  (`metrics.ts`, `pipeline.ts`) that take `now` as a parameter.
 - When a schema in `src/lib/crm/` changes, update `firestore.rules` to match
   (field list, types and limits from `src/lib/crm/limits.ts`).
 
@@ -36,7 +41,11 @@ product, but it is a demo.
 
 - Semantic HTML, full keyboard navigation, visible focus styles, WCAG AA
   contrast, and respect `prefers-reduced-motion`.
-- Mobile-first. Check layouts at 375px, 768px and 1280px wide.
+- Mobile-first. Check layouts at 375px, 768px and 1280px wide, in light and
+  dark themes, with no horizontal page overflow.
+- Chart colours come from the validated `--chart-*` tokens in `globals.css`
+  (light and dark). Every chart needs an accessible name and a visually hidden
+  data table.
 
 ## Definition of done
 
